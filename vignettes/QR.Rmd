@@ -1,0 +1,106 @@
+---
+title: "QR factorization without pivoting"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{QR factorization without pivoting}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+# Introduction
+
+This package implements in R the LAPACK routine DGEQRF to obtain the QR factorization without pivoting of a real matrix.
+
+This package aims to solve one of the issues of the qr() function of base R, it returns the solution obtained using QR factorization with pivoting. Therefore, the product Q\*R is not equal to the factorized matrix.
+
+# Further information
+
+For further explanation on the DGEQRF routine, read the following [document](https://www.netlib.org/lapack/explore-html/dd/d9a/group__double_g_ecomputational_ga3766ea903391b5cf9008132f7440ec7b.html).
+
+# Example on how to use QR
+
+```{r echo=FALSE,include=FALSE}
+library(QR)
+set.seed(26112011)
+```
+
+First, we need to define the matrix we want to factorize. This matrix can be of any m x n dimensions and the entries must be real numbers.
+
+```{r echo=TRUE, include=TRUE}
+# Let's sample a random square-matrix
+A<-matrix(runif(121,min = -100, max = 100), 11, 11)
+```
+
+Once, we have the matrix, it is time to use the QR function:
+
+```{r echo=TRUE, include=TRUE, collapse=TRUE}
+QRres<-QR(A)
+QRres
+```
+
+We can observe that the output is a list with 4 elements:
+
+-   qr: This element is a matrix returned by the DGEQRF routine with the same dimensions as A. The upper triangle contains the **R** of the decomposition and the lower triangle contains information on the **Q** of the decomposition (stored in compact form).
+
+-   qraux: This element is a vector returned by the DGEQRF routine of length ncol(A) which contains additional information on **Q**.
+
+-   Q: This element is an orthogonal matrix such that Q\*R is equal to A.
+
+-   R: This element is an upper triangular matrix such that Q\*R is the input matrix.
+
+
+Let's print the Q and R matrices obtained using QR().
+
+```{r echo=TRUE, include=TRUE, collapse=TRUE}
+QRres$Q
+
+QRres$R
+```
+
+We can check if Q is orthogonal by multiplying Q and $Q^T$.
+
+```{r echo=TRUE, include=TRUE, collapse=TRUE}
+all.equal(QRres$Q%*%t(QRres$Q),diag(11))
+```
+
+Also, we can easily check that R is upper triangular.
+
+```{r echo=TRUE, include=TRUE, collapse=TRUE}
+all.equal(QRres$R[lower.tri(QRres$R)],rep(0,11*10/2))
+```
+
+Finally, we can test if the factorization is correct by multiplying Q and R to obtain A.
+
+```{r echo=TRUE, include=TRUE, collapse=TRUE}
+all.equal(QRres$Q%*%QRres$R,A)
+```
+
+# Comparison between QR() and qr() from base R.
+
+In the help file of the functions to reconstruct the Q and R matrices from base R we find the following example:
+
+```{r echo=TRUE, include=TRUE, collapse=TRUE}
+# example of pivoting
+x <- cbind(int = 1,
+           b1 = rep(1:0, each = 3), b2 = rep(0:1, each = 3),
+           c1 = rep(c(1,0,0), 2), c2 = rep(c(0,1,0), 2), c3 = rep(c(0,0,1),2))
+x # is singular, columns "b2" and "c3" are "extra"
+a <- qr(x)
+```
+
+If we multiply the obtained Q and R, we do not obtain x:
+
+```{r echo=TRUE, include=TRUE, collapse=TRUE}
+all.equal(qr.Q(a)%*%qr.R(a),x)
+```
+
+This is caused because the solution was obtained using column pivoting.
+
+If we use the function QR(), the product of Q and R is equal to x:
+
+```{r echo=TRUE, include=TRUE, collapse=TRUE}
+all.equal(QR(x)$Q%*%QR(x)$R,x)
+```
+
+**Note**: The unpivoted solution is NOT equal to the pivoted solution after a transformation that undoes the column pivoting.

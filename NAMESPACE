@@ -1,0 +1,3 @@
+useDynLib(QR, .registration = TRUE)
+import(tinytest)
+export(QR)
